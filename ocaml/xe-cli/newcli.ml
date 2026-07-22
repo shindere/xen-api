@@ -75,7 +75,7 @@ exception Usage
 let usage () =
   let help =
     Printf.sprintf
-      {|Usage: 
+      {|Usage:
   %s <command>
     [ -s <server> ]            XenServer host
     [ -p <port> ]              XenServer port number
@@ -363,6 +363,7 @@ let with_open_tcp_ssl server f =
   f (ic, oc)
 
 let with_open_tcp server f =
+  debug "Trying to connect to CLI server %s\n" server;
   if !xeusessl && not (is_localhost server) then (* never use SSL on-host *)
     with_open_tcp_ssl server f
   else
