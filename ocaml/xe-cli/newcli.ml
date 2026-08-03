@@ -217,7 +217,6 @@ let parse_args =
   (* opposed to key=value. Secondly, the key then gets passed along with   *)
   (* all the others to the operations. So we need to register it's there,  *)
   (* but not strip it                                                      *)
-  let reserve_args = ref [] in
   let set_keyword (k, v) =
     try
       ( match k with
@@ -344,7 +343,7 @@ let parse_args =
         debug_channel := Some tmpch
       )
     in
-    (args_rest @ extras_rest @ rcs_rest @ !reserve_args, !traceparent)
+    (args_rest @ extras_rest @ rcs_rest, !traceparent)
 
 let exit_status = ref 1
 
