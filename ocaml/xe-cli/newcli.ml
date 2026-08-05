@@ -538,7 +538,7 @@ let main_loop ifd ofd permitted_filenames =
       )
     | Command (HttpConnect url) -> (
         let server, path = parse_url url in
-        (* The releatively complex design here helps to buffer input/output
+        (* The relatively complex design here helps to buffer input/output
            	         when the underlying connection temporarily breaks, hence provides
            	         seemingly continous connection. *)
         let block = 65536 in
