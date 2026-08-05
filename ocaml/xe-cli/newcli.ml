@@ -826,11 +826,13 @@ let main () =
         exit 0
       ) ;
       let args, traceparent = parse_args args in
-      (* All the named args are taken as permitted filename to be uploaded *)
       if args = [] then
         raise Usage
       else
+        (* All the named args are taken as permitted filename to be uploaded *)
         let permitted_filenames = get_permit_filenames args in
+        debug "Permitted file names: %s\n%!"
+          (List.map Fpath.to_string permitted_filenames |> String.concat " ") ;
         with_open_channels @@ fun (ic, oc) ->
         Printf.fprintf oc "POST /cli HTTP/1.0\r\n" ;
         let args =
