@@ -834,19 +834,27 @@ let main () =
         debug "Permitted file names: %s\n%!"
           (List.map Fpath.to_string permitted_filenames |> String.concat " ") ;
         with_open_channels @@ fun (ic, oc) ->
-        Printf.fprintf oc "POST /cli HTTP/1.0\r\n" ;
         let args =
           args @ ["username=" ^ !xapiuname; "password=" ^ !xapipword]
         in
         let args = String.concat "\n" args in
-        Printf.fprintf oc "User-agent: xe-cli/Unix/%d.%d\r\n" major minor ;
-        Printf.fprintf oc "originator: cli\r\n" ;
-        Option.iter (Printf.fprintf oc "traceparent: %s\r\n") traceparent ;
-        Option.iter
-          (Printf.fprintf oc "baggage: %s\r\n")
-          (Sys.getenv_opt "BAGGAGE") ;
-        Printf.fprintf oc "content-length: %d\r\n\r\n" (String.length args) ;
-        Printf.fprintf oc "%s" args ;
+        let headers =
+          [
+            "POST /cli HTTP/1.0"
+          ; Printf.sprintf "User-agent: xe-cli/Unix/%d.%d" major minor
+          ; "originator: cli"
+          ]
+          @ (Option.map (Printf.sprintf "traceparent: %s") traceparent
+            |> Option.to_list
+            )
+          @ (Option.map (Printf.sprintf "baggage: %s") (Sys.getenv_opt "BAGGAGE")
+            |> Option.to_list
+            )
+          @ [Printf.sprintf "content-length: %d" (String.length args); ""; ""]
+        in
+        let request = String.concat "\r\n" headers ^ args in
+        debug "HTTP request as sent to the server:\n%s\n%!" request ;
+        Printf.fprintf oc "%s" request ;
         flush_all () ;
         let in_fd = Unix.descr_of_in_channel ic
         and out_fd = Unix.descr_of_out_channel oc in
