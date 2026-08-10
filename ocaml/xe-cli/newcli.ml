@@ -332,15 +332,13 @@ let parse_args (args : string list) =
     (fun tp -> traceparent := Some tp)
     (Sys.getenv_opt Tracing.EnvHelpers.traceparent_key) ;
   let args_rest = process_args args in
-  let () =
-    if !xapipasswordfile <> "" then read_pwf () ;
-    if !xedebug then debug_channel := Some stderr ;
-    if !xedebugonfail then (
-      let tmpfile, tmpch = Filename.open_temp_file "xe_debug" "tmp" in
-      debug_file := Some tmpfile ;
-      debug_channel := Some tmpch
-    )
-  in
+  if !xapipasswordfile <> "" then read_pwf () ;
+  if !xedebug then debug_channel := Some stderr ;
+  if !xedebugonfail then (
+    let tmpfile, tmpch = Filename.open_temp_file "xe_debug" "tmp" in
+    debug_file := Some tmpfile ;
+    debug_channel := Some tmpch
+    );
   (args_rest @ extras_rest @ rcs_rest, !traceparent)
 
 let exit_status = ref 1
