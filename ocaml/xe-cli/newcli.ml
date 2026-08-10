@@ -207,94 +207,95 @@ let get_permit_filenames args =
     )
     args
 
+(* Set the key to the value. Return whether the key is one we know about *)
+(* compat mode is special as the argument is passed in two places. Once  *)
+(* at the top of the message to the cli server in order to indicate that *)
+(* we need to use 'geneva style' parsing - that is, allow key = value as *)
+(* opposed to key=value. Secondly, the key then gets passed along with   *)
+(* all the others to the operations. So we need to register it's there,  *)
+(* but not strip it                                                      *)
+let set_keyword (k, v) =
+  try
+    ( match k with
+    | "server" ->
+        xapiserver := v
+    | "port" ->
+        xapiport := Some (parse_port v)
+    | "username" ->
+        xapiuname := v
+    | "password" ->
+        xapipword := v
+    | "passwordfile" ->
+        xapipasswordfile := v
+    | "nossl" ->
+        xeusessl := not (bool_of_string v)
+    | "debug" -> (
+        xedebug := try bool_of_string v with _ -> false
+      )
+    | "debugonfail" -> (
+        xedebugonfail := try bool_of_string v with _ -> false
+      )
+    | "traceparent" ->
+        traceparent := Some v
+    | _ ->
+        raise Not_found
+    ) ;
+    true
+  with Not_found -> false
+
+let parse_opt args =
+  match args with
+  | "-s" :: server :: xs ->
+      Some ("server", server, xs)
+  | "-p" :: port :: xs ->
+      Some ("port", port, xs)
+  | "-u" :: uname :: xs ->
+      Some ("username", uname, xs)
+  | "-pw" :: pw :: xs ->
+      Some ("password", pw, xs)
+  | "-pwf" :: pwf :: xs ->
+      Some ("passwordfile", pwf, xs)
+  | "--nossl" :: xs ->
+      Some ("nossl", "true", xs)
+  | "--debug" :: xs ->
+      Some ("debug", "true", xs)
+  | "--debug-on-fail" :: xs ->
+      Some ("debugonfail", "true", xs)
+  | "-h" :: h :: xs ->
+      Some ("server", h, xs)
+  | "--traceparent" :: h :: xs ->
+      Some ("traceparent", h, xs)
+  | _ ->
+      None
+
+let rec process_args = function
+  | [] ->
+      []
+  | args -> (
+    match parse_opt args with
+    | Some (k, v, rest) ->
+        if set_keyword (k, v) then
+          process_args rest
+        else
+          process_eql args
+    | None ->
+        process_eql args
+  )
+
+and process_eql = function
+  | [] ->
+      []
+  | arg :: args -> (
+    match Astring.String.cut ~sep:"=" arg with
+    | Some (k, v) when set_keyword (k, v) ->
+        process_args args
+    | _ ->
+        arg :: process_args args
+  )
+
 (* Extract the arguments we're interested in. Return a list of the argumets we know *)
 (* nothing about. These will get passed straight into the server *)
 let parse_args =
-  (* Set the key to the value. Return whether the key is one we know about *)
-  (* compat mode is special as the argument is passed in two places. Once  *)
-  (* at the top of the message to the cli server in order to indicate that *)
-  (* we need to use 'geneva style' parsing - that is, allow key = value as *)
-  (* opposed to key=value. Secondly, the key then gets passed along with   *)
-  (* all the others to the operations. So we need to register it's there,  *)
-  (* but not strip it                                                      *)
-  let set_keyword (k, v) =
-    try
-      ( match k with
-      | "server" ->
-          xapiserver := v
-      | "port" ->
-          xapiport := Some (parse_port v)
-      | "username" ->
-          xapiuname := v
-      | "password" ->
-          xapipword := v
-      | "passwordfile" ->
-          xapipasswordfile := v
-      | "nossl" ->
-          xeusessl := not (bool_of_string v)
-      | "debug" -> (
-          xedebug := try bool_of_string v with _ -> false
-        )
-      | "debugonfail" -> (
-          xedebugonfail := try bool_of_string v with _ -> false
-        )
-      | "traceparent" ->
-          traceparent := Some v
-      | _ ->
-          raise Not_found
-      ) ;
-      true
-    with Not_found -> false
-  in
-  let parse_opt args =
-    match args with
-    | "-s" :: server :: xs ->
-        Some ("server", server, xs)
-    | "-p" :: port :: xs ->
-        Some ("port", port, xs)
-    | "-u" :: uname :: xs ->
-        Some ("username", uname, xs)
-    | "-pw" :: pw :: xs ->
-        Some ("password", pw, xs)
-    | "-pwf" :: pwf :: xs ->
-        Some ("passwordfile", pwf, xs)
-    | "--nossl" :: xs ->
-        Some ("nossl", "true", xs)
-    | "--debug" :: xs ->
-        Some ("debug", "true", xs)
-    | "--debug-on-fail" :: xs ->
-        Some ("debugonfail", "true", xs)
-    | "-h" :: h :: xs ->
-        Some ("server", h, xs)
-    | "--traceparent" :: h :: xs ->
-        Some ("traceparent", h, xs)
-    | _ ->
-        None
-  in
-  let rec process_args = function
-    | [] ->
-        []
-    | args -> (
-      match parse_opt args with
-      | Some (k, v, rest) ->
-          if set_keyword (k, v) then
-            process_args rest
-          else
-            process_eql args
-      | None ->
-          process_eql args
-    )
-  and process_eql = function
-    | [] ->
-        []
-    | arg :: args -> (
-      match Astring.String.cut ~sep:"=" arg with
-      | Some (k, v) when set_keyword (k, v) ->
-          process_args args
-      | _ ->
-          arg :: process_args args
-    )
-  in
   fun args ->
     let rcs = Options.read_rc () in
     let rcs_rest =
