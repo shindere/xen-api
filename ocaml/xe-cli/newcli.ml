@@ -315,6 +315,8 @@ let parse_extra_args extra_args =
 (* Extract the arguments we're interested in. Return a list of the argumets we know *)
 (* nothing about. These will get passed straight into the server *)
 let parse_args (args : string list) =
+  let is_help_opt opt = opt = "-help" || opt = "--help" in
+  if List.exists is_help_opt args then raise Usage;
   let rcs_rest =
     Options.read_rc ()
     |> List.filter (fun (k, v) -> not (set_keyword (k, v)))
@@ -329,11 +331,7 @@ let parse_args (args : string list) =
   Option.iter
     (fun tp -> traceparent := Some tp)
     (Sys.getenv_opt Tracing.EnvHelpers.traceparent_key) ;
-  let help = ref false in
-  let args' = List.filter (fun s -> s <> "-help" && s <> "--help") args in
-  if List.length args' < List.length args then help := true ;
   let args_rest = process_args args in
-  if !help then raise Usage ;
   let () =
     if !xapipasswordfile <> "" then read_pwf () ;
     if !xedebug then debug_channel := Some stderr ;
