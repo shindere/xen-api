@@ -293,6 +293,8 @@ and process_eql = function
         arg :: process_args args
   )
 
+let safe_getenv var = Option.value (Sys.getenv_opt var) ~default:""
+
 (* Extract the arguments we're interested in. Return a list of the argumets we know *)
 (* nothing about. These will get passed straight into the server *)
 let parse_args args =
@@ -303,7 +305,7 @@ let parse_args args =
   in
   let extras =
     let extra_args =
-      Option.value (Sys.getenv_opt "XE_EXTRA_ARGS") ~default:""
+      safe_getenv "XE_EXTRA_ARGS"
     in
     let l = ref [] and pos = ref 0 and i = ref 0 in
     while !pos < String.length extra_args do
