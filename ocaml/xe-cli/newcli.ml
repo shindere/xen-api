@@ -295,6 +295,25 @@ and process_eql = function
 
 let safe_getenv var = Option.value (Sys.getenv_opt var) ~default:""
 
+let parse_extra_args extra_args =
+  let l = ref [] and pos = ref 0 and i = ref 0 in
+  while !pos < String.length extra_args do
+    if extra_args.[!pos] = ',' then (
+      incr pos ;
+      i := !pos
+    ) else if
+        !i >= String.length extra_args
+        || (extra_args.[!i] = ',' && extra_args.[!i - 1] <> '\\')
+      then (
+      let seg = String.sub extra_args !pos (!i - !pos) in
+      l := Astring.String.filter (( <> ) '\\') seg :: !l ;
+      incr i ;
+      pos := !i
+    ) else
+      incr i
+  done ;
+  List.rev !l
+
 (* Extract the arguments we're interested in. Return a list of the argumets we know *)
 (* nothing about. These will get passed straight into the server *)
 let parse_args args =
@@ -303,29 +322,9 @@ let parse_args args =
     |> List.filter (fun (k, v) -> not (set_keyword (k, v)))
     |> List.map (fun (k, v) -> k ^ "=" ^ v)
   in
-  let extras =
-    let extra_args =
-      safe_getenv "XE_EXTRA_ARGS"
-    in
-    let l = ref [] and pos = ref 0 and i = ref 0 in
-    while !pos < String.length extra_args do
-      if extra_args.[!pos] = ',' then (
-        incr pos ;
-        i := !pos
-      ) else if
-          !i >= String.length extra_args
-          || (extra_args.[!i] = ',' && extra_args.[!i - 1] <> '\\')
-        then (
-        let seg = String.sub extra_args !pos (!i - !pos) in
-        l := Astring.String.filter (( <> ) '\\') seg :: !l ;
-        incr i ;
-        pos := !i
-      ) else
-        incr i
-    done ;
-    List.rev !l
+  let extras_rest =
+    safe_getenv "XE_EXTRA_ARGS" |> parse_extra_args |> process_args
   in
-  let extras_rest = process_args extras in
   (*if traceparent is set as env var update it after we process the extras.*)
   Option.iter
     (fun tp -> traceparent := Some tp)
