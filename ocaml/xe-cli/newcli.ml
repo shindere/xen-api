@@ -294,11 +294,10 @@ and process_eql = function
 (* Extract the arguments we're interested in. Return a list of the argumets we know *)
 (* nothing about. These will get passed straight into the server *)
 let parse_args (args : string list) =
-  let rcs = Options.read_rc () in
   let rcs_rest =
-    List.map
-      (fun (k, v) -> k ^ "=" ^ v)
-      (List.filter (fun (k, v) -> not (set_keyword (k, v))) rcs)
+    Options.read_rc ()
+    |> List.filter (fun (k, v) -> not (set_keyword (k, v)))
+    |> List.map (fun (k, v) -> k ^ "=" ^ v)
   in
   let extras =
     let extra_args =
