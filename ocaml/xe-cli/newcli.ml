@@ -293,56 +293,55 @@ and process_eql = function
 
 (* Extract the arguments we're interested in. Return a list of the argumets we know *)
 (* nothing about. These will get passed straight into the server *)
-let parse_args =
-  fun args ->
-    let rcs = Options.read_rc () in
-    let rcs_rest =
-      List.map
-        (fun (k, v) -> k ^ "=" ^ v)
-        (List.filter (fun (k, v) -> not (set_keyword (k, v))) rcs)
+let parse_args (args : string list) =
+  let rcs = Options.read_rc () in
+  let rcs_rest =
+    List.map
+      (fun (k, v) -> k ^ "=" ^ v)
+      (List.filter (fun (k, v) -> not (set_keyword (k, v))) rcs)
+  in
+  let extras =
+    let extra_args =
+      Option.value (Sys.getenv_opt "XE_EXTRA_ARGS") ~default:""
     in
-    let extras =
-      let extra_args =
-        Option.value (Sys.getenv_opt "XE_EXTRA_ARGS") ~default:""
-      in
-      let l = ref [] and pos = ref 0 and i = ref 0 in
-      while !pos < String.length extra_args do
-        if extra_args.[!pos] = ',' then (
-          incr pos ;
-          i := !pos
-        ) else if
-            !i >= String.length extra_args
-            || (extra_args.[!i] = ',' && extra_args.[!i - 1] <> '\\')
-          then (
-          let seg = String.sub extra_args !pos (!i - !pos) in
-          l := String.filter_chars seg (( <> ) '\\') :: !l ;
-          incr i ;
-          pos := !i
-        ) else
-          incr i
-      done ;
-      List.rev !l
-    in
-    let extras_rest = process_args extras in
-    (*if traceparent is set as env var update it after we process the extras.*)
-    Option.iter
-      (fun tp -> traceparent := Some tp)
-      (Sys.getenv_opt Tracing.EnvHelpers.traceparent_key) ;
-    let help = ref false in
-    let args' = List.filter (fun s -> s <> "-help" && s <> "--help") args in
-    if List.length args' < List.length args then help := true ;
-    let args_rest = process_args args in
-    if !help then raise Usage ;
-    let () =
-      if !xapipasswordfile <> "" then read_pwf () ;
-      if !xedebug then debug_channel := Some stderr ;
-      if !xedebugonfail then (
-        let tmpfile, tmpch = Filename.open_temp_file "xe_debug" "tmp" in
-        debug_file := Some tmpfile ;
-        debug_channel := Some tmpch
-      )
-    in
-    (args_rest @ extras_rest @ rcs_rest, !traceparent)
+    let l = ref [] and pos = ref 0 and i = ref 0 in
+    while !pos < String.length extra_args do
+      if extra_args.[!pos] = ',' then (
+        incr pos ;
+        i := !pos
+      ) else if
+          !i >= String.length extra_args
+          || (extra_args.[!i] = ',' && extra_args.[!i - 1] <> '\\')
+        then (
+        let seg = String.sub extra_args !pos (!i - !pos) in
+        l := String.filter_chars seg (( <> ) '\\') :: !l ;
+        incr i ;
+        pos := !i
+      ) else
+        incr i
+    done ;
+    List.rev !l
+  in
+  let extras_rest = process_args extras in
+  (*if traceparent is set as env var update it after we process the extras.*)
+  Option.iter
+    (fun tp -> traceparent := Some tp)
+    (Sys.getenv_opt Tracing.EnvHelpers.traceparent_key) ;
+  let help = ref false in
+  let args' = List.filter (fun s -> s <> "-help" && s <> "--help") args in
+  if List.length args' < List.length args then help := true ;
+  let args_rest = process_args args in
+  if !help then raise Usage ;
+  let () =
+    if !xapipasswordfile <> "" then read_pwf () ;
+    if !xedebug then debug_channel := Some stderr ;
+    if !xedebugonfail then (
+      let tmpfile, tmpch = Filename.open_temp_file "xe_debug" "tmp" in
+      debug_file := Some tmpfile ;
+      debug_channel := Some tmpch
+    )
+  in
+  (args_rest @ extras_rest @ rcs_rest, !traceparent)
 
 let exit_status = ref 1
 
