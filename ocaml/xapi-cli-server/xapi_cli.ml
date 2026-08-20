@@ -394,6 +394,7 @@ let exception_handler s e =
         s
 
 let handler (req : Http.Request.t) (s : Unix.file_descr) _ =
+  info "A string printed by Seb to report we enter the command-line handler, server-side" ;
   let str = Http_svr.read_body ~limit:Constants.http_limit_max_cli_size req s in
   (* Tell the client the server version *)
   marshal_protocol s ;
