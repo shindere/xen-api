@@ -55,6 +55,18 @@ val get_all : string -> 'a t -> 'a list
 
 val exists : string -> 'a t -> bool
 
+val consume : 'a t -> 'a t
+(** Mark every entry visible through [t] as read, and return [t]. For call sites
+    that take a whole (view's) contents wholesale -- e.g. forwarding a map
+    parameter to the API -- typically piped into {!to_pairs}. *)
+
+val mark_used : string -> 'a t -> unit
+(** Mark the entry for [key], if any, as read, without reading its value. *)
+
+val unused : 'a t -> string list
+(** The keys of the entries no command has read through {!get} & co. Used to
+    report the parameters a command silently ignored. *)
+
 val add : string -> 'a -> 'a t -> 'a t
 (** [add key value t] prepends [(key, value)], shadowing any existing binding
     for [key] in subsequent {!get} / {!get_opt} lookups. *)
@@ -67,5 +79,11 @@ val filter_out : (string -> bool) -> 'a t -> 'a t
 
 val remove : string -> 'a t -> 'a t
 (** Remove the first pair bound to [key] (mirrors [List.remove_assoc]). *)
+
+val rename_key : from_:string -> to_:string -> 'a t -> unit
+(** Rename every entry keyed [from_] to [to_], in place. The entry records are
+    shared with the views of [t] and with the structure it was derived from, so
+    the rename -- and any subsequent {!mark_used} -- is visible from all of
+    them. *)
 
 val keys : 'a t -> string list

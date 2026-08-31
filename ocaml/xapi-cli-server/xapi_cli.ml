@@ -225,6 +225,8 @@ let uninteresting_cmd_postfixes = ["help"; "-get"; "-list"]
 
 let exec_command req cmd s session args =
   let params = get_params cmd in
+  (* Parameters consumed by the CLI framework itself, not by the command. *)
+  List.iter (fun k -> Cli_args.mark_used k params) Cli_args.reserved ;
   let minimal =
     Cli_args.get_opt "minimal" params
     |> Option.fold ~none:false ~some:bool_of_string
