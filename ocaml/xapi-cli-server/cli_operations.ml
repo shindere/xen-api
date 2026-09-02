@@ -436,6 +436,7 @@ let stdparams =
   ; "all"
   ; "message-priority"
   ; "trace"
+  ; "report-ignored-params"
   ]
 
 (* [params_except extra params] is the [(key, value)] pairs of [params] with the
