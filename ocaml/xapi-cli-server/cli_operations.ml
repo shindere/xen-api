@@ -7102,6 +7102,12 @@ let host_get_system_status_capabilities printer rpc session_id params =
     )
 
 let host_get_system_status fd _printer rpc session_id params =
+  (* A client that knows --allow-server-provided-filenames consumes it, so
+     receiving it as a parameter means the client does not know it *)
+  if Cli_args.exists "allow-server-provided-filenames" params then
+    failwith
+      "This xe client does not support --allow-server-provided-filenames; use \
+       a newer client" ;
   let filename = Cli_args.get "filename" params in
   let entries = Cli_args.get_default "entries" params "" in
   let output = try Cli_args.get "output" params with _ -> "tar.bz2" in

@@ -48,6 +48,8 @@ let xedebug = ref false
 
 let xedebugonfail = ref false
 
+let allow_server_provided_filenames = ref false
+
 let stunnel_processes = ref []
 
 let debug_channel = ref None
@@ -86,6 +88,8 @@ let usage () =
     [ --minimal ]              Output only values in a comma-separated lists
     [ --traceparent <value> ]  Distributed tracing context
     [ --trace ]                Show task stacktrace on failure
+    [ --allow-server-provided-filenames ]
+                               Let the server name downloaded files
     [ report-ignored-params=off|warn ]
                                Report parameters the command ignored (on stderr)
     [ <other arguments> ... ]  Command-specific options
@@ -241,6 +245,10 @@ let parse_args =
       | "debugonfail" -> (
           xedebugonfail := try bool_of_string v with _ -> false
         )
+      | "allow-server-provided-filenames" -> (
+          allow_server_provided_filenames :=
+            try bool_of_string v with _ -> false
+        )
       | "traceparent" ->
           traceparent := Some v
       | _ ->
@@ -267,6 +275,8 @@ let parse_args =
         Some ("debug", "true", xs)
     | "--debug-on-fail" :: xs ->
         Some ("debugonfail", "true", xs)
+    | "--allow-server-provided-filenames" :: xs ->
+        Some ("allow-server-provided-filenames", "true", xs)
     | "-h" :: h :: xs ->
         Some ("server", h, xs)
     | "--traceparent" :: h :: xs ->
@@ -460,8 +470,15 @@ let handle_unmarshal_failure ex ifd =
   | e ->
       raise e
 
-let assert_filename_permitted ?(permit_cwd = false) permitted_filenames filename
-    =
+(* A file name the server may choose for a download when the user allowed
+   it: a single component, so the file lands in the current directory, and
+   not starting with a dot, so that it cannot be a hidden file other
+   programs would read (e.g. .netrc) *)
+let is_plain_filename filename =
+  filename <> "" && (not (String.contains filename '/')) && filename.[0] <> '.'
+
+let assert_filename_permitted ?(permit_cwd = false) ?(hint = "")
+    permitted_filenames filename =
   let permitted_filenames =
     match permit_cwd with
     | true ->
@@ -473,11 +490,17 @@ let assert_filename_permitted ?(permit_cwd = false) permitted_filenames filename
   let requested_file = canonicalize filename in
   match List.mem requested_file permitted_filenames with
   | false ->
+      let hint =
+        if hint = "" then
+          ""
+        else
+          ".\n" ^ hint
+      in
       let error_message =
         Printf.sprintf
           "Blocked upload/download of the file %s, which was requested by the \
-           server. The file name was not present on the command line"
-          filename
+           server. The file name was not present on the command line%s"
+          filename hint
       in
       raise (Filename_not_permitted error_message)
   | _ ->
@@ -766,15 +789,29 @@ let main_loop ifd ofd permitted_filenames =
               let file_ch =
                 if filename = "" then
                   Unix.out_channel_of_descr (Unix.dup Unix.stdout)
-                else (
-                  assert_filename_permitted ~permit_cwd:true permitted_filenames
-                    filename ;
+                else
+                  let allowed = !allow_server_provided_filenames in
+                  let plain = is_plain_filename filename in
+                  ( if not (allowed && plain) then
+                      let hint =
+                        match (allowed, plain) with
+                        | false, true ->
+                            "Use --allow-server-provided-filenames to accept \
+                             file names chosen by the server"
+                        | true, false ->
+                            "--allow-server-provided-filenames only accepts \
+                             names without '/' that do not start with a dot"
+                        | _ ->
+                            ""
+                      in
+                      assert_filename_permitted ~permit_cwd:true ~hint
+                        permitted_filenames filename
+                  ) ;
                   try
                     open_out_gen
                       [Open_wronly; Open_creat; Open_excl]
                       0o600 filename
                   with e -> raise (ClientSideError (Printexc.to_string e))
-                )
               in
               while input_line ic <> "\r" do
                 ()
