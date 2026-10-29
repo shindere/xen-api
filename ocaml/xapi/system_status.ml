@@ -20,36 +20,7 @@ let task_label = "Retrieving system status"
 
 module L = Debug.Make (struct let name = __MODULE__ end)
 
-module Output = struct
-  (** The output formats of xen-bugtool *)
-  type t = Tar | TarBz2 | Zip
-
-  let of_string = function
-    | "tar" ->
-        Some Tar
-    | "tar.bz2" ->
-        Some TarBz2
-    | "zip" ->
-        Some Zip
-    | _ ->
-        None
-
-  let to_extension = function
-    | Tar ->
-        "tar"
-    | TarBz2 ->
-        "tar.bz2"
-    | Zip ->
-        "zip"
-
-  let to_mime = function
-    | Tar ->
-        "application/x-tar"
-    | TarBz2 ->
-        "application/x-bzip2"
-    | Zip ->
-        "application/zip"
-end
+module Output = System_status_helpers.Output
 
 module Bugtool = struct
   let path = "/usr/sbin/xen-bugtool"
@@ -78,11 +49,10 @@ module Bugtool = struct
     L.debug "%s: running %s" __FUNCTION__ cmd ;
     cmd
 
-  let filename __context extension =
-    let timestamp = Ptime_clock.now () |> Ptime.to_rfc3339 ~tz_offset_s:0 in
+  let filename __context output =
     let self = Helpers.get_localhost ~__context in
     let hostname = Db.Host.get_hostname ~__context ~self in
-    Printf.sprintf "system_status-%s-%s.%s" timestamp hostname extension
+    System_status_helpers.make_filename ~hostname ~output
 end
 
 let get_capabilities () = Helpers.get_process_output Bugtool.cmd_capabilities
@@ -93,7 +63,7 @@ let send_via_fd __context s entries output =
   let uuid = Uuidx.to_string (Uuidx.make ()) in
   let extension = Output.to_extension output in
   let content_type = Output.to_mime output in
-  let filename = Bugtool.filename __context extension in
+  let filename = Bugtool.filename __context output in
   let params = Bugtool.params_fd ~entries ~extension ~uuid in
   let headers =
     Http.http_200_ok ~keep_alive:false ~version:"1.0" ()
@@ -126,7 +96,7 @@ let send_via_cp __context s entries output =
   let cmd = Bugtool.cmd_cp ~entries ~extension in
   try
     let filepath = String.trim (Helpers.get_process_output cmd) in
-    let filename = Bugtool.filename __context extension in
+    let filename = Bugtool.filename __context output in
     let hsts_time = !Xapi_globs.hsts_max_age in
     finally
       (fun () ->
