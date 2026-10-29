@@ -23,7 +23,6 @@ module Output : sig
   val to_mime : t -> string
 end
 
-val make_filename : hostname:string -> output:Output.t -> string
-(** [make_filename ~hostname ~output] is the name under which the system
-    status report of host [hostname] is downloaded, with the current time in
-    it *)
+val make_filename : time:Ptime.t -> hostname:string -> output:Output.t -> string
+(** [make_filename ~time ~hostname ~output] is the name under which the system
+    status report of host [hostname], requested at [time], is downloaded *)
