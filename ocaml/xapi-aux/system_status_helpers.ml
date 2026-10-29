@@ -43,7 +43,7 @@ module Output = struct
         "application/zip"
 end
 
-let make_filename ~hostname ~output =
-  let timestamp = Ptime_clock.now () |> Ptime.to_rfc3339 ~tz_offset_s:0 in
+let make_filename ~time ~hostname ~output =
+  let timestamp = Ptime.to_rfc3339 ~tz_offset_s:0 time in
   Printf.sprintf "system_status-%s-%s.%s" timestamp hostname
     (Output.to_extension output)
