@@ -26,6 +26,8 @@ module Output = struct
     | _ ->
         None
 
+  let to_string = function Tar -> "tar" | TarBz2 -> "tar.bz2" | Zip -> "zip"
+
   let to_extension = function
     | Tar ->
         "tar"
