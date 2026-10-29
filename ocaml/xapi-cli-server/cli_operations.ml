@@ -3446,8 +3446,7 @@ let do_vm_op ?(include_control_vms = false) ?(include_template_vms = false)
       ^ "' is not a field of the VM class. Failed to select VM for operation."
       )
 
-let do_host_op rpc session_id op params ?(multiple = true) ignore_params =
-  let hosts = select_hosts rpc session_id params ignore_params in
+let do_host_op_on_hosts op params ?(multiple = true) hosts =
   match List.length hosts with
   | 0 ->
       failwith "No matching hosts found"
@@ -3465,6 +3464,10 @@ let do_host_op rpc session_id op params ?(multiple = true) ignore_params =
               "Multiple matching hosts found. --multiple required to complete \
                the operation"
           )
+
+let do_host_op rpc session_id op params ?(multiple = true) ignore_params =
+  let hosts = select_hosts rpc session_id params ignore_params in
+  do_host_op_on_hosts op params ~multiple hosts
 
 let do_sr_op rpc session_id op params ?(multiple = true) ignore_params =
   let srs = select_srs rpc session_id params ignore_params in
