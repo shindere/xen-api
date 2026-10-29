@@ -44,7 +44,7 @@ module Output = struct
 
   let to_mime = function
     | Tar ->
-        "appliation/x-tar"
+        "application/x-tar"
     | TarBz2 ->
         "application/x-bzip2"
     | Zip ->
