@@ -18,6 +18,8 @@ module Output : sig
 
   val of_string : string -> t option
 
+  val to_string : t -> string
+
   val to_extension : t -> string
 
   val to_mime : t -> string

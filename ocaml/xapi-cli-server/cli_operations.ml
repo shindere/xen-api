@@ -7108,18 +7108,38 @@ let host_get_system_status fd _printer rpc session_id params =
     failwith
       "This xe client does not support --allow-server-provided-filenames; use \
        a newer client" ;
-  let filename = Cli_args.get "filename" params in
+  let filename = Cli_args.get_opt "filename" params in
   let entries = Cli_args.get_default "entries" params "" in
-  let output = try Cli_args.get "output" params with _ -> "tar.bz2" in
-  ( match output with
-  | "tar.bz2" | "tar" | "zip" ->
-      ()
-  | _ ->
-      failwith "Invalid output format. Must be 'tar', 'zip' or 'tar.bz2'"
-  ) ;
+  let output =
+    match
+      System_status_helpers.Output.of_string
+        (Cli_args.get_default "output" params "tar.bz2")
+    with
+    | Some output ->
+        output
+    | None ->
+        failwith "Invalid output format. Must be 'tar', 'zip' or 'tar.bz2'"
+  in
+  let time = Date.(to_ptime (now ())) in
+  let ignore_params = ["filename"; "entries"; "output"] in
+  let hosts = select_hosts rpc session_id params ignore_params in
+  if Option.is_some filename && List.length hosts > 1 then
+    failwith
+      "filename cannot be given when several hosts match. Omit it to get one \
+       file per host, named after the host" ;
   let op _ host =
     let doit task_id =
       let uuid = safe_get_field (field_lookup host.fields "uuid") in
+      let filename =
+        match filename with
+        | Some filename ->
+            filename
+        | None ->
+            let hostname =
+              safe_get_field (field_lookup host.fields "hostname")
+            in
+            System_status_helpers.make_filename ~time ~hostname ~output
+      in
       let someone =
         try SpecificHost (Client.Host.get_by_uuid ~rpc ~session_id ~uuid)
         with _ -> Master
@@ -7128,13 +7148,14 @@ let host_get_system_status fd _printer rpc session_id params =
       let url =
         Printf.sprintf "%s%s?session_id=%s&entries=%s&output=%s&task_id=%s"
           prefix Constants.system_status_uri (Ref.string_of session_id) entries
-          output (Ref.string_of task_id)
+          (System_status_helpers.Output.to_string output)
+          (Ref.string_of task_id)
       in
       HttpGet (filename, url)
     in
     track_http_operation fd rpc session_id doit "system-status download"
   in
-  ignore (do_host_op rpc session_id op params ["filename"; "entries"; "output"])
+  ignore (do_host_op_on_hosts op params hosts)
 
 let host_set_hostname_live _printer rpc session_id params =
   let host_uuid = Cli_args.get "host-uuid" params in

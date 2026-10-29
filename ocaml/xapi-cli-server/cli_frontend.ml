@@ -981,12 +981,15 @@ let rec cmdtable_data : (string * cmd_spec) list =
     )
   ; ( "host-get-system-status"
     , {
-        reqd= ["filename"]
-      ; optn= ["entries"; "output"]
+        reqd= []
+      ; optn= ["filename"; "entries"; "output"]
       ; help=
-          "Download system status into <filename>.  Entries is a \
-           comma-separated list.  Output may be 'tar', 'tar.bz2' (the default) \
-           or 'zip'."
+          "Download system status into <filename>.  Without filename, the \
+           status of each host is downloaded into the current directory, under \
+           a name containing the host name and the time; this needs \
+           --allow-server-provided-filenames.  filename cannot be given when \
+           several hosts match.  Entries is a comma-separated list.  Output \
+           may be 'tar', 'tar.bz2' (the default) or 'zip'."
       ; implementation= With_fd Cli_operations.host_get_system_status
       ; flags= [Host_selectors]
       }
@@ -4244,6 +4247,8 @@ let cmd_help printer minimal cmd =
     [ --debug ]                Enable debug output
     [ --debug-on-fail ]        Enable debug output only on failure
     [ --traceparent <value> ]  Distributed tracing context
+    [ --allow-server-provided-filenames ]
+                               Let the server name downloaded files
     [ report-ignored-params=off|warn ]
                                Report parameters the command ignored (on stderr)
     [ <other arguments> ... ]  Command-specific options
