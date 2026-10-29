@@ -10,7 +10,6 @@
     ipaddr
     ipaddr.unix
     ptime
-    ptime.clock.os
     tar
     threads.posix
     unix
