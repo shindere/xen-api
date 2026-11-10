@@ -44,6 +44,7 @@ module Output = struct
 end
 
 let make_filename ~time ~hostname ~output =
-  let timestamp = Ptime.to_rfc3339 ~tz_offset_s:0 time in
+  let (y, mo, d), ((h, mi, s), _) = Ptime.to_date_time ~tz_offset_s:0 time in
+  let timestamp = Printf.sprintf "%04d%02d%02dT%02d%02d%02dZ" y mo d h mi s in
   Printf.sprintf "system_status-%s-%s.%s" timestamp hostname
     (Output.to_extension output)
