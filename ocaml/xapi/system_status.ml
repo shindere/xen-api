@@ -52,8 +52,9 @@ module Bugtool = struct
   let filename __context output =
     let self = Helpers.get_localhost ~__context in
     let hostname = Db.Host.get_hostname ~__context ~self in
+    let uuid = Db.Host.get_uuid ~__context ~self in
     System_status_helpers.make_filename ~time:(Ptime_clock.now ()) ~hostname
-      ~output
+      ~uuid ~output
 end
 
 let get_capabilities () = Helpers.get_process_output Bugtool.cmd_capabilities
