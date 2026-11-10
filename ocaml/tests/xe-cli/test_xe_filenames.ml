@@ -29,7 +29,7 @@ let refused ?permit_cwd name expected () =
 let message name =
   Printf.sprintf
     "Blocked upload/download of the file %s, which was requested by the \
-     server. The file name was not present on the command line\n"
+     server. The file name was not present on the command line"
     name
 
 let command_line () =
