@@ -476,7 +476,7 @@ let assert_filename_permitted ?(permit_cwd = false) permitted_filenames filename
       let error_message =
         Printf.sprintf
           "Blocked upload/download of the file %s, which was requested by the \
-           server. The file name was not present on the command line\n"
+           server. The file name was not present on the command line"
           filename
       in
       raise (Filename_not_permitted error_message)
