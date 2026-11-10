@@ -43,8 +43,19 @@ module Output = struct
         "application/zip"
 end
 
-let make_filename ~time ~hostname ~output =
-  let (y, mo, d), ((h, mi, s), _) = Ptime.to_date_time ~tz_offset_s:0 time in
-  let timestamp = Printf.sprintf "%04d%02d%02dT%02d%02d%02dZ" y mo d h mi s in
-  Printf.sprintf "system_status-%s-%s.%s" timestamp hostname
+let make_filename ~time ~hostname ~uuid ~output =
+  let (year, month, day), ((hour, minute, second), _) =
+    Ptime.to_date_time ~tz_offset_s:0 time
+  in
+  let timestamp =
+    Cli_protocol.system_status_timestamp
+      {year; month; day; hour; minute; second}
+  in
+  let host =
+    if Cli_protocol.is_valid_hostname hostname then
+      hostname
+    else
+      uuid
+  in
+  Printf.sprintf "system_status-%s-%s.%s" timestamp host
     (Output.to_extension output)

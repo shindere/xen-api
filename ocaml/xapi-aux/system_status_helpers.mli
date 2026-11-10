@@ -23,8 +23,11 @@ module Output : sig
   val to_mime : t -> string
 end
 
-val make_filename : time:Ptime.t -> hostname:string -> output:Output.t -> string
-(** [make_filename ~time ~hostname ~output] is the name under which the system
-    status report of host [hostname], requested at [time], is downloaded. The
-    time is written in UTC, in the ISO 8601 basic format (20261110T163518Z),
-    so that the name contains no colon. *)
+val make_filename :
+  time:Ptime.t -> hostname:string -> uuid:string -> output:Output.t -> string
+(** [make_filename ~time ~hostname ~uuid ~output] is the name under which the
+    system status report of the host whose host name is [hostname] and UUID is
+    [uuid], requested at [time], is downloaded. The time is written in UTC, in
+    the ISO 8601 basic format (20261110T163518Z), so that the name contains no
+    colon. The host name is replaced with the UUID when it does not satisfy
+    [Cli_protocol.is_valid_hostname], so that the xe client accepts the name. *)
