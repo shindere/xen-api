@@ -16,11 +16,10 @@ open Xe_filenames
 
 let permitted = get_permit_filenames ["filename=report.tar"; "uuid=1234"]
 
-let accepted ?permit_cwd name () =
-  assert_filename_permitted ?permit_cwd permitted name
+let accepted name () = assert_filename_permitted permitted name
 
-let refused ?permit_cwd name expected () =
-  match assert_filename_permitted ?permit_cwd permitted name with
+let refused name expected () =
+  match assert_filename_permitted permitted name with
   | () ->
       Alcotest.failf "%s was accepted" name
   | exception Filename_not_permitted msg ->
@@ -56,7 +55,6 @@ let tests =
     , refused "other.tar" (message "other.tar")
     )
   ; ("current directory", `Quick, refused "." (message "."))
-  ; ("current directory with permit_cwd", `Quick, accepted ~permit_cwd:true ".")
   ]
 
 let () = Alcotest.run "xe file names" [("Xe_filenames", tests)]

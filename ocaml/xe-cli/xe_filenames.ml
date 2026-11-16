@@ -37,16 +37,7 @@ let get_permit_filenames args =
 
 exception Filename_not_permitted of string
 
-let assert_filename_permitted ?(permit_cwd = false) permitted_filenames filename
-    =
-  let permitted_filenames =
-    match permit_cwd with
-    | true ->
-        Filename.current_dir_name |> canonicalize |> fun x ->
-        x :: permitted_filenames
-    | _ ->
-        permitted_filenames
-  in
+let assert_filename_permitted permitted_filenames filename =
   let requested_file = canonicalize filename in
   match List.mem requested_file permitted_filenames with
   | false ->

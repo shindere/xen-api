@@ -23,8 +23,6 @@ val get_permit_filenames : string list -> Fpath.t list
 
 exception Filename_not_permitted of string
 
-val assert_filename_permitted :
-  ?permit_cwd:bool -> Fpath.t list -> string -> unit
-(** [assert_filename_permitted ?permit_cwd permitted filename] raises
-    [Filename_not_permitted] unless [filename] is one of [permitted], or the
-    current directory if [permit_cwd] is true. *)
+val assert_filename_permitted : Fpath.t list -> string -> unit
+(** [assert_filename_permitted permitted filename] raises
+    [Filename_not_permitted] unless [filename] is one of [permitted]. *)
