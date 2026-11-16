@@ -460,16 +460,7 @@ let handle_unmarshal_failure ex ifd =
   | e ->
       raise e
 
-let assert_filename_permitted ?(permit_cwd = false) permitted_filenames filename
-    =
-  let permitted_filenames =
-    match permit_cwd with
-    | true ->
-        Filename.current_dir_name |> canonicalize |> fun x ->
-        x :: permitted_filenames
-    | _ ->
-        permitted_filenames
-  in
+let assert_filename_permitted permitted_filenames filename =
   let requested_file = canonicalize filename in
   match List.mem requested_file permitted_filenames with
   | false ->
@@ -767,8 +758,7 @@ let main_loop ifd ofd permitted_filenames =
                 if filename = "" then
                   Unix.out_channel_of_descr (Unix.dup Unix.stdout)
                 else (
-                  assert_filename_permitted ~permit_cwd:true permitted_filenames
-                    filename ;
+                  assert_filename_permitted permitted_filenames filename ;
                   try
                     open_out_gen
                       [Open_wronly; Open_creat; Open_excl]
