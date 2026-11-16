@@ -25,4 +25,13 @@ exception Filename_not_permitted of string
 
 val assert_filename_permitted : Fpath.t list -> string -> unit
 (** [assert_filename_permitted permitted filename] raises
-    [Filename_not_permitted] unless [filename] is one of [permitted]. *)
+    [Filename_not_permitted] unless [filename] is one of [permitted]. It
+    checks the names of the files that xe uploads. *)
+
+val assert_download_filename_permitted :
+  command:string -> Fpath.t list -> string -> unit
+(** [assert_download_filename_permitted ~command permitted filename] raises
+    [Filename_not_permitted] unless [filename] is one of [permitted], or a
+    name that {!Cli_protocol.is_server_filename_accepted} accepts for
+    [command]. It checks the names under which xe writes the files it
+    downloads. *)

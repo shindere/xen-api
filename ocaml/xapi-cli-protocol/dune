@@ -2,6 +2,7 @@
   (name xapi_cli_protocol)
   (public_name xapi-cli-protocol)
   (libraries
+    re
     threads
     unix
     xapi-stdext-unix

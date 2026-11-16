@@ -1,7 +1,7 @@
 (library
   (name xe_filenames)
   (modules xe_filenames)
-  (libraries astring fpath)
+  (libraries astring fpath xapi-cli-protocol)
 )
 
 (executable

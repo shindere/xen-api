@@ -37,16 +37,34 @@ let get_permit_filenames args =
 
 exception Filename_not_permitted of string
 
+let is_on_command_line permitted_filenames filename =
+  List.mem (canonicalize filename) permitted_filenames
+
 let assert_filename_permitted permitted_filenames filename =
-  let requested_file = canonicalize filename in
-  match List.mem requested_file permitted_filenames with
-  | false ->
-      let error_message =
-        Printf.sprintf
-          "Blocked upload/download of the file %s, which was requested by the \
-           server. The file name was not present on the command line"
-          filename
-      in
-      raise (Filename_not_permitted error_message)
-  | _ ->
-      ()
+  if not (is_on_command_line permitted_filenames filename) then
+    raise
+      (Filename_not_permitted
+         (Printf.sprintf
+            "Blocked upload of the file %s, which was requested by the server. \
+             The file name was not present on the command line"
+            filename
+         )
+      )
+
+(* The names under which xe writes a file downloaded from the server *)
+let is_download_filename_permitted ~command permitted_filenames filename =
+  is_on_command_line permitted_filenames filename
+  || Cli_protocol.is_server_filename_accepted ~command filename
+
+let assert_download_filename_permitted ~command permitted_filenames filename =
+  if not (is_download_filename_permitted ~command permitted_filenames filename)
+  then
+    raise
+      (Filename_not_permitted
+         (Printf.sprintf
+            "Blocked download of the file %s, which was requested by the \
+             server. The file name was not present on the command line, and is \
+             not one that xe accepts from the server for this command"
+            filename
+         )
+      )

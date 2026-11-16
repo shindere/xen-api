@@ -439,7 +439,7 @@ let handle_unmarshal_failure ex ifd =
   | e ->
       raise e
 
-let main_loop ifd ofd permitted_filenames =
+let main_loop ifd ofd ~command permitted_filenames =
   (* Intially exchange version information *)
   let major', minor' =
     try unmarshal_protocol ifd with
@@ -723,7 +723,8 @@ let main_loop ifd ofd permitted_filenames =
                 if filename = "" then
                   Unix.out_channel_of_descr (Unix.dup Unix.stdout)
                 else (
-                  assert_filename_permitted permitted_filenames filename ;
+                  assert_download_filename_permitted ~command
+                    permitted_filenames filename ;
                   try
                     open_out_gen
                       [Open_wronly; Open_creat; Open_excl]
@@ -793,27 +794,28 @@ let main () =
       let args, traceparent = parse_args args in
       (* All the named args are taken as permitted filename to be uploaded *)
       let permitted_filenames = get_permit_filenames args in
-      if args = [] then
-        raise Usage
-      else
-        with_open_channels @@ fun (ic, oc) ->
-        Printf.fprintf oc "POST /cli HTTP/1.0\r\n" ;
-        let args =
-          args @ ["username=" ^ !xapiuname; "password=" ^ !xapipword]
-        in
-        let args = String.concat "\n" args in
-        Printf.fprintf oc "User-agent: xe-cli/Unix/%d.%d\r\n" major minor ;
-        Printf.fprintf oc "originator: cli\r\n" ;
-        Option.iter (Printf.fprintf oc "traceparent: %s\r\n") traceparent ;
-        Option.iter
-          (Printf.fprintf oc "baggage: %s\r\n")
-          (Sys.getenv_opt "BAGGAGE") ;
-        Printf.fprintf oc "content-length: %d\r\n\r\n" (String.length args) ;
-        Printf.fprintf oc "%s" args ;
-        flush_all () ;
-        let in_fd = Unix.descr_of_in_channel ic
-        and out_fd = Unix.descr_of_out_channel oc in
-        exit_status := main_loop in_fd out_fd permitted_filenames
+      match args with
+      | [] ->
+          raise Usage
+      | command :: _ ->
+          with_open_channels @@ fun (ic, oc) ->
+          Printf.fprintf oc "POST /cli HTTP/1.0\r\n" ;
+          let args =
+            args @ ["username=" ^ !xapiuname; "password=" ^ !xapipword]
+          in
+          let args = String.concat "\n" args in
+          Printf.fprintf oc "User-agent: xe-cli/Unix/%d.%d\r\n" major minor ;
+          Printf.fprintf oc "originator: cli\r\n" ;
+          Option.iter (Printf.fprintf oc "traceparent: %s\r\n") traceparent ;
+          Option.iter
+            (Printf.fprintf oc "baggage: %s\r\n")
+            (Sys.getenv_opt "BAGGAGE") ;
+          Printf.fprintf oc "content-length: %d\r\n\r\n" (String.length args) ;
+          Printf.fprintf oc "%s" args ;
+          flush_all () ;
+          let in_fd = Unix.descr_of_in_channel ic
+          and out_fd = Unix.descr_of_out_channel oc in
+          exit_status := main_loop in_fd out_fd ~command permitted_filenames
     with
     | Usage ->
         exit_status := 0 ;

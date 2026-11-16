@@ -25,11 +25,32 @@ let refused name expected () =
   | exception Filename_not_permitted msg ->
       Alcotest.(check string) "message" expected msg
 
-let message name =
+let upload_message name =
   Printf.sprintf
-    "Blocked upload/download of the file %s, which was requested by the \
-     server. The file name was not present on the command line"
+    "Blocked upload of the file %s, which was requested by the server. The \
+     file name was not present on the command line"
     name
+
+let download_message name =
+  Printf.sprintf
+    "Blocked download of the file %s, which was requested by the server. The \
+     file name was not present on the command line, and is not one that xe \
+     accepts from the server for this command"
+    name
+
+let command = "host-get-system-status"
+
+let report = "system_status-20261110T163518Z-host1.tar"
+
+let download_accepted ~command name () =
+  assert_download_filename_permitted ~command permitted name
+
+let download_refused ~command name () =
+  match assert_download_filename_permitted ~command permitted name with
+  | () ->
+      Alcotest.failf "%s was accepted" name
+  | exception Filename_not_permitted msg ->
+      Alcotest.(check string) "message" (download_message name) msg
 
 let command_line () =
   Alcotest.(check int)
@@ -52,9 +73,25 @@ let tests =
   ; ("any value of the command line", `Quick, accepted "1234")
   ; ( "name absent from the command line"
     , `Quick
-    , refused "other.tar" (message "other.tar")
+    , refused "other.tar" (upload_message "other.tar")
     )
-  ; ("current directory", `Quick, refused "." (message "."))
+  ; ("current directory", `Quick, refused "." (upload_message "."))
+  ; ( "download, name on the command line"
+    , `Quick
+    , download_accepted ~command "report.tar"
+    )
+  ; ( "download, name chosen by the server"
+    , `Quick
+    , download_accepted ~command report
+    )
+  ; ( "download, name chosen by the server for another command"
+    , `Quick
+    , download_refused ~command:"vm-export" report
+    )
+  ; ( "download, other name chosen by the server"
+    , `Quick
+    , download_refused ~command "other.tar"
+    )
   ]
 
 let () = Alcotest.run "xe file names" [("Xe_filenames", tests)]
