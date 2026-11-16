@@ -15,6 +15,7 @@ depends: [
   "ocaml"
   "dune" {>= "3.15"}
   "base-threads"
+  "re"
   "alcotest" {with-test}
   "xapi-consts"
   "xapi-datamodel"

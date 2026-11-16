@@ -460,21 +460,39 @@ let handle_unmarshal_failure ex ifd =
   | e ->
       raise e
 
-let assert_filename_permitted permitted_filenames filename =
-  let requested_file = canonicalize filename in
-  match List.mem requested_file permitted_filenames with
-  | false ->
-      let error_message =
-        Printf.sprintf
-          "Blocked upload/download of the file %s, which was requested by the \
-           server. The file name was not present on the command line"
-          filename
-      in
-      raise (Filename_not_permitted error_message)
-  | _ ->
-      ()
+let is_on_command_line permitted_filenames filename =
+  List.mem (canonicalize filename) permitted_filenames
 
-let main_loop ifd ofd permitted_filenames =
+let assert_filename_permitted permitted_filenames filename =
+  if not (is_on_command_line permitted_filenames filename) then
+    raise
+      (Filename_not_permitted
+         (Printf.sprintf
+            "Blocked upload of the file %s, which was requested by the server. \
+             The file name was not present on the command line"
+            filename
+         )
+      )
+
+(* The names under which xe writes a file downloaded from the server *)
+let is_download_filename_permitted ~command permitted_filenames filename =
+  is_on_command_line permitted_filenames filename
+  || is_server_filename_accepted ~command filename
+
+let assert_download_filename_permitted ~command permitted_filenames filename =
+  if not (is_download_filename_permitted ~command permitted_filenames filename)
+  then
+    raise
+      (Filename_not_permitted
+         (Printf.sprintf
+            "Blocked download of the file %s, which was requested by the \
+             server. The file name was not present on the command line, and is \
+             not one that xe accepts from the server for this command"
+            filename
+         )
+      )
+
+let main_loop ifd ofd ~command permitted_filenames =
   (* Intially exchange version information *)
   let major', minor' =
     try unmarshal_protocol ifd with
@@ -758,7 +776,8 @@ let main_loop ifd ofd permitted_filenames =
                 if filename = "" then
                   Unix.out_channel_of_descr (Unix.dup Unix.stdout)
                 else (
-                  assert_filename_permitted permitted_filenames filename ;
+                  assert_download_filename_permitted ~command
+                    permitted_filenames filename ;
                   try
                     open_out_gen
                       [Open_wronly; Open_creat; Open_excl]
@@ -828,27 +847,28 @@ let main () =
       let args, traceparent = parse_args args in
       (* All the named args are taken as permitted filename to be uploaded *)
       let permitted_filenames = get_permit_filenames args in
-      if args = [] then
-        raise Usage
-      else
-        with_open_channels @@ fun (ic, oc) ->
-        Printf.fprintf oc "POST /cli HTTP/1.0\r\n" ;
-        let args =
-          args @ ["username=" ^ !xapiuname; "password=" ^ !xapipword]
-        in
-        let args = String.concat "\n" args in
-        Printf.fprintf oc "User-agent: xe-cli/Unix/%d.%d\r\n" major minor ;
-        Printf.fprintf oc "originator: cli\r\n" ;
-        Option.iter (Printf.fprintf oc "traceparent: %s\r\n") traceparent ;
-        Option.iter
-          (Printf.fprintf oc "baggage: %s\r\n")
-          (Sys.getenv_opt "BAGGAGE") ;
-        Printf.fprintf oc "content-length: %d\r\n\r\n" (String.length args) ;
-        Printf.fprintf oc "%s" args ;
-        flush_all () ;
-        let in_fd = Unix.descr_of_in_channel ic
-        and out_fd = Unix.descr_of_out_channel oc in
-        exit_status := main_loop in_fd out_fd permitted_filenames
+      match args with
+      | [] ->
+          raise Usage
+      | command :: _ ->
+          with_open_channels @@ fun (ic, oc) ->
+          Printf.fprintf oc "POST /cli HTTP/1.0\r\n" ;
+          let args =
+            args @ ["username=" ^ !xapiuname; "password=" ^ !xapipword]
+          in
+          let args = String.concat "\n" args in
+          Printf.fprintf oc "User-agent: xe-cli/Unix/%d.%d\r\n" major minor ;
+          Printf.fprintf oc "originator: cli\r\n" ;
+          Option.iter (Printf.fprintf oc "traceparent: %s\r\n") traceparent ;
+          Option.iter
+            (Printf.fprintf oc "baggage: %s\r\n")
+            (Sys.getenv_opt "BAGGAGE") ;
+          Printf.fprintf oc "content-length: %d\r\n\r\n" (String.length args) ;
+          Printf.fprintf oc "%s" args ;
+          flush_all () ;
+          let in_fd = Unix.descr_of_in_channel ic
+          and out_fd = Unix.descr_of_out_channel oc in
+          exit_status := main_loop in_fd out_fd ~command permitted_filenames
     with
     | Usage ->
         exit_status := 0 ;

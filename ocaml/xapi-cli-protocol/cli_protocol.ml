@@ -334,3 +334,61 @@ let unmarshal_protocol (fd : Unix.file_descr) =
     let minor', _ = unmarshal_int (minor_str, 0) in
     (major', minor')
   with e -> raise (Unmarshal_failure (e, Buffer.contents buf))
+
+(* Names of downloaded files that the xe client accepts from the server
+   although they do not appear on its command line. Such a name contains no
+   '/' and does not start with a dot, so the file is created in the current
+   directory. *)
+
+let is_hostname_char = function
+  | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '-' | '.' ->
+      true
+  | _ ->
+      false
+
+let is_valid_hostname s =
+  let n = String.length s in
+  n > 0
+  && n <= 64
+  && String.for_all is_hostname_char s
+  && s.[0] <> '-'
+  && s.[n - 1] <> '-'
+
+(* A time in UTC, as written in the names of system status reports *)
+type utc_time = {
+    year: int
+  ; month: int
+  ; day: int
+  ; hour: int
+  ; minute: int
+  ; second: int
+}
+
+(* ISO 8601 basic format: YYYYmmddTHHMMSSZ *)
+let system_status_timestamp t =
+  Printf.sprintf "%04d%02d%02dT%02d%02d%02dZ" t.year t.month t.day t.hour
+    t.minute t.second
+
+(* system_status-<timestamp>-<hostname>.<tar|tar.bz2|zip>, where the
+   timestamp is written by [system_status_timestamp] *)
+let system_status_filename_re =
+  Re.compile
+    (Re.whole_string
+       (Re.Posix.re
+          {|system_status-[0-9]{8}T[0-9]{6}Z-(.+)\.(tar|tar\.bz2|zip)|}
+       )
+    )
+
+let is_system_status_filename name =
+  match Re.exec_opt system_status_filename_re name with
+  | Some groups ->
+      is_valid_hostname (Re.Group.get groups 1)
+  | None ->
+      false
+
+let is_server_filename_accepted ~command filename =
+  match command with
+  | "host-get-system-status" ->
+      is_system_status_filename filename
+  | _ ->
+      false
