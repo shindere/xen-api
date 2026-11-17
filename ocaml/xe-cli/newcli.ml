@@ -14,6 +14,7 @@
 (* New cli talking to the in-server cli interface *)
 
 open Xapi_stdext_pervasives
+open Xe_filenames
 open Cli_protocol
 
 (* Param config priorities:
@@ -113,14 +114,6 @@ let hdrs =
   ; "location"
   ]
 
-let canonicalize path =
-  let open Fpath in
-  match Filename.is_relative path with
-  | true ->
-      (Sys.getcwd () |> v) // (path |> v) |> normalize
-  | false ->
-      path |> v |> normalize
-
 let end_of_string s from = String.sub s from (String.length s - from)
 
 let strip_cr r =
@@ -196,18 +189,6 @@ let parse_port (x : string) =
   with _ ->
     error "Port number must be an integer (0-65535)\n" ;
     raise Usage
-
-let get_permit_filenames args =
-  List.filter_map
-    (fun arg ->
-      match Astring.String.cut ~sep:"=" arg with
-      | Some (_, v) -> (
-        match String.trim v with "" -> None | _ -> Some (v |> canonicalize)
-      )
-      | _ ->
-          None
-    )
-    args
 
 (* Extract the arguments we're interested in. Return a list of the argumets we know *)
 (* nothing about. These will get passed straight into the server *)
@@ -443,8 +424,6 @@ exception Unexpected_msg of message
 
 exception Server_internal_error
 
-exception Filename_not_permitted of string
-
 let handle_unmarshal_failure ex ifd =
   match ex with
   | Unmarshal_failure (e, s) ->
@@ -459,29 +438,6 @@ let handle_unmarshal_failure ex ifd =
         raise e
   | e ->
       raise e
-
-let assert_filename_permitted ?(permit_cwd = false) permitted_filenames filename
-    =
-  let permitted_filenames =
-    match permit_cwd with
-    | true ->
-        Filename.current_dir_name |> canonicalize |> fun x ->
-        x :: permitted_filenames
-    | _ ->
-        permitted_filenames
-  in
-  let requested_file = canonicalize filename in
-  match List.mem requested_file permitted_filenames with
-  | false ->
-      let error_message =
-        Printf.sprintf
-          "Blocked upload/download of the file %s, which was requested by the \
-           server. The file name was not present on the command line\n"
-          filename
-      in
-      raise (Filename_not_permitted error_message)
-  | _ ->
-      ()
 
 let main_loop ifd ofd permitted_filenames =
   (* Intially exchange version information *)

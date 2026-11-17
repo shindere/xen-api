@@ -1,6 +1,13 @@
+(library
+  (name xe_filenames)
+  (modules xe_filenames)
+  (libraries astring fpath)
+)
+
 (executable
   (modes exe)
   (name newcli)
+  (modules newcli options)
   (public_name xe)
   (package xe)
   (libraries
@@ -18,5 +25,6 @@
     xapi-cli-protocol
     xapi-stdext-pervasives
     xapi-stdext-unix
+    xe_filenames
   )
 )
