@@ -1,0 +1,9 @@
+(test
+  (name test_xe_filenames)
+  (modes exe)
+  (package xe)
+  (libraries
+    alcotest
+    xe_filenames
+  )
+)
