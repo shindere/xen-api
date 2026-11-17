@@ -314,8 +314,6 @@ let unmarshal (fd : Unix.file_descr) =
 let marshal_protocol (fd : Unix.file_descr) =
   write_string fd (prefix ^ marshal_int major ^ marshal_int minor)
 
-exception Protocol_mismatch of string
-
 exception Not_a_cli_server
 
 let unmarshal_protocol (fd : Unix.file_descr) =
